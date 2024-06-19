@@ -28,7 +28,6 @@ public class TrelloAPITest {
 
     @Test
     void getBoard() {
-        // RestAssured.baseURI = "https://api.trello.com";
         ResponseBody responseBody = given()
                 .when()
                 .get(TRELLO_URL + ACCESS_KEY).getBody();
