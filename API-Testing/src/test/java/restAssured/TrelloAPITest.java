@@ -13,7 +13,9 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Properties;
+import java.util.Spliterator;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -21,20 +23,17 @@ import static org.hamcrest.Matchers.*;
 public class TrelloAPITest {
     Properties prop = new Properties();
     String ACCESS_KEY;
-    String TRELLO = "https://api.trello.com/1/boards/6670a17ed711030864d3fbc1/?";
-
+    static String boardId;
 
     public static String getBoardId() {
         return boardId;
     }
 
-    public static void setBoardId(String boardId) {
-        TrelloAPITest.boardId = boardId;
+    public static void setBoardId(String newBoardId) {
+        if (boardId==null){
+            boardId = newBoardId;
+        }
     }
-
-    static String boardId;
-
-
 
     @BeforeTest
     public void beforeAllTests() throws IOException {
@@ -46,6 +45,7 @@ public class TrelloAPITest {
         ACCESS_KEY = "token=" + TOKEN + "&key=" + API_KEY;
         RestAssured.baseURI = "https://api.trello.com/1/boards/";
     }
+
     @Test
     void createBoard(){
         ValidatableResponse response = given()
@@ -57,31 +57,25 @@ public class TrelloAPITest {
                 .post("?"+ACCESS_KEY)
                 .then()
                 .statusCode(200)
-                .body("name",equalTo("Brand New Appliances12345"));
+                .body("name",equalTo("Brand New Appliances"));
         TrelloAPITest.setBoardId(response.extract().jsonPath().getString("id"));
+        System.out.println(response.extract().jsonPath().getString("id"));
 
-//        context.setAttribute("id",response.extract().path("id"));
-//        setBoardId(response.extract().path("id"));
-//        id=response.extract().path("id");
         System.out.println("New board created: "+TrelloAPITest.boardId);
     }
 
     @Test(dependsOnMethods = {"createBoard"})
     void getBoard() {
-        System.out.println(getBoardId());
         ResponseBody responseBody = given()
-                //.header("Content-Type","application/json; charset-utf-8")
-                //.contentType(ContentType.JSON)
                 .when()
                 .get( TrelloAPITest.boardId +"/?" + ACCESS_KEY).getBody();
         responseBody.as(Board.class);
-        System.out.println(responseBody.prettyPrint());
+        System.out.println("The following board(s) have been found \n" +responseBody.prettyPrint());
         Assert.assertTrue(responseBody.prettyPrint().contains((getBoardId())));
     }
 
-    @Test(dependsOnMethods = {"createBoard"})
+    @Test(dependsOnMethods = {"getBoard"})
     void updateBoard(){
-        //boardId = context.getAttribute("id");
         System.out.println(getBoardId());
         ValidatableResponse response = given()
                     .header("Accept","application/json")
@@ -94,19 +88,15 @@ public class TrelloAPITest {
                     .statusCode(200);
     }
 
-    @Test (dependsOnMethods = {"createBoard"})
+    @Test (dependsOnMethods = {"updateBoard"})
     void deleteBoard(){
-        System.out.println(boardId);
         ValidatableResponse response =given()
                 .contentType("application/json")
                 .when()
-                .delete(TrelloAPITest.boardId+ "?"+ ACCESS_KEY)
+                    .delete(TrelloAPITest.boardId+ "?"+ ACCESS_KEY)
                 .then()
-                .statusCode(200);
+                    .statusCode(200);
         Assert.assertNull(response.extract().path("id"));
     }
-
-
-
 
 }
