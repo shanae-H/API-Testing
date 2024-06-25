@@ -14,6 +14,7 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.HttpStatus;
+import org.apache.hc.core5.net.URIBuilder;
 import org.pojo.Board;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
@@ -21,6 +22,8 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Properties;
 
 public class TrelloApacheTest {
@@ -59,8 +62,10 @@ public class TrelloApacheTest {
         try(CloseableHttpClient client = HttpClients.createDefault();
         CloseableHttpResponse response = client.execute(postNewBoard)){
             int statusCode = response.getCode();
-            Assert.assertEquals(statusCode,200);
+            Assert.assertEquals(statusCode,200,"Board was not created");
+
             ObjectMapper objectMapper = new ObjectMapper();
+            System.out.println("Json response is deserialized and mapped to the Board class");
             Board board = objectMapper.readValue(response.getEntity().getContent(), Board.class);
             setBoardId(board.getId());
             System.out.println("New board created. ID# "+ boardId);
@@ -69,7 +74,7 @@ public class TrelloApacheTest {
         }
     }
 
-    @Test
+    @Test (dependsOnMethods = {"createBoard"})
     public void getBoard(){
         String request = baseURI + boardId + "/?" + ACCESS_KEY;
         HttpGet getSpecificBoard = new HttpGet(request);
@@ -77,20 +82,18 @@ public class TrelloApacheTest {
         try(CloseableHttpClient client = HttpClients.createDefault();
         CloseableHttpResponse response = client.execute(getSpecificBoard)){
             int statusCode =response.getCode();
-            Assert.assertEquals(statusCode,200);
+            Assert.assertEquals(statusCode,200,"Board of id#: "+boardId+" not found");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    @Test
-    public void updateBoard(){
+    @Test (dependsOnMethods = {"getBoard"})
+    public void originalUpdateBoard(){
         System.out.println("The board with the following board has been updated: " + boardId);
         String queryParams ="name=ListofRollbackProducts&desc=DescribeslistofclothingitemstobeplacedinRollbacksections";
         String request = baseURI + boardId + "/?" + queryParams + "&" +ACCESS_KEY;
         HttpPut putUpdatedBoard = new HttpPut(request);
-        //putUpdatedBoard.setHeader("Accept","application/json");
-        //putUpdatedBoard.setHeader("Content-type","application/json");
         try(CloseableHttpClient client = HttpClients.createDefault();
         CloseableHttpResponse response = client.execute(putUpdatedBoard)){
             int statusCode = response.getCode();
@@ -100,7 +103,29 @@ public class TrelloApacheTest {
         }
     }
 
-    @Test (dependsOnMethods = {"createBoard"})
+    @Test (dependsOnMethods = {"getBoard"})
+    public void updateBoard(){
+        try {
+            URIBuilder builder = new URIBuilder();
+            builder.setScheme("https").setHost("api.trello.com").setPath("/1/boards/"+boardId)
+                    .setParameter("name","Back to School Special")
+                    .setParameter("desc","Describes school supplies being discounted for the back to school season")
+                    .setParameter("key", API_KEY)
+                    .setParameter("token", TOKEN);
+            URI uri = builder.build();
+            HttpPut httpPut = new HttpPut(uri);
+            System.out.println("Outputting request string to verify correct URI is built: "+ httpPut.getUri().toString());
+            try (CloseableHttpClient client = HttpClients.createDefault();
+                 CloseableHttpResponse response = client.execute(httpPut)) {
+                int statusCode = response.getCode();
+                Assert.assertEquals(statusCode,200, "Board was not updated");
+            }
+        } catch (URISyntaxException | IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test (dependsOnMethods = {"updateBoard"})
     public void deleteBoard(){
         String request = baseURI + boardId + "/?" + ACCESS_KEY;
         HttpDelete removeSpecificBoard = new HttpDelete(request);
@@ -108,7 +133,7 @@ public class TrelloApacheTest {
         try(CloseableHttpClient client = HttpClients.createDefault();
             CloseableHttpResponse response = client.execute(removeSpecificBoard)){
             int statusCode =response.getCode();
-            Assert.assertEquals(statusCode,200);
+            Assert.assertEquals(statusCode,200,"Could not delete board");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
