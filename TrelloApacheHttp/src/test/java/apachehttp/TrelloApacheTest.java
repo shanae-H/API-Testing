@@ -89,21 +89,6 @@ public class TrelloApacheTest {
     }
 
     @Test (dependsOnMethods = {"getBoard"})
-    public void originalUpdateBoard(){
-        System.out.println("The board with the following board has been updated: " + boardId);
-        String queryParams ="name=ListofRollbackProducts&desc=DescribeslistofclothingitemstobeplacedinRollbacksections";
-        String request = baseURI + boardId + "/?" + queryParams + "&" +ACCESS_KEY;
-        HttpPut putUpdatedBoard = new HttpPut(request);
-        try(CloseableHttpClient client = HttpClients.createDefault();
-        CloseableHttpResponse response = client.execute(putUpdatedBoard)){
-            int statusCode = response.getCode();
-            Assert.assertEquals(statusCode,200);
-        }catch (IOException e){
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Test (dependsOnMethods = {"getBoard"})
     public void updateBoard(){
         try {
             URIBuilder builder = new URIBuilder();
