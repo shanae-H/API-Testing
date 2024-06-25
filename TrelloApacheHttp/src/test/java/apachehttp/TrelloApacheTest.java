@@ -1,19 +1,14 @@
 package apachehttp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.HttpStatus;
-import org.apache.hc.core5.http.NameValuePair;
-import org.apache.hc.core5.http.ParseException;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.message.BasicNameValuePair;
-import org.apache.hc.core5.util.Asserts;
 import org.pojo.Board;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
@@ -21,8 +16,6 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 public class TrelloApacheTest {
@@ -56,10 +49,10 @@ public class TrelloApacheTest {
     @Test
     public void createBoard(){
         String request = baseURI+"?name=ApacheBoard&"+ACCESS_KEY;
-        HttpPost post = new HttpPost(request);
-        post.setHeader("Content-type","application/json");
+        HttpPost postNewBoard = new HttpPost(request);
+        postNewBoard.setHeader("Content-type","application/json");
         try(CloseableHttpClient client = HttpClients.createDefault();
-        CloseableHttpResponse response = client.execute(post)){
+        CloseableHttpResponse response = client.execute(postNewBoard)){
             int statusCode = response.getCode();
             Assert.assertEquals(statusCode,200);
             ObjectMapper objectMapper = new ObjectMapper();
@@ -73,7 +66,7 @@ public class TrelloApacheTest {
 
     @Test
     public void getBoard(){
-        String request = baseURI+boardId+"/?"+ACCESS_KEY;
+        String request = baseURI + boardId + "/?" + ACCESS_KEY;
         HttpGet getSpecificBoard = new HttpGet(request);
         getSpecificBoard.setHeader("Content-type","application/json");
         try(CloseableHttpClient client = HttpClients.createDefault();
@@ -87,10 +80,35 @@ public class TrelloApacheTest {
 
     @Test
     public void updateBoard(){
+        System.out.println("The board with the following board has been updated: " + boardId);
+        String queryParams ="name=ListofRollbackProducts&desc=DescribeslistofclothingitemstobeplacedinRollbacksections";
+        String request = baseURI + boardId + "/?" + queryParams + "&" +ACCESS_KEY;
+        HttpPut putUpdatedBoard = new HttpPut(request);
+        //putUpdatedBoard.setHeader("Accept","application/json");
+        //putUpdatedBoard.setHeader("Content-type","application/json");
+        try(CloseableHttpClient client = HttpClients.createDefault();
+        CloseableHttpResponse response = client.execute(putUpdatedBoard)){
+            int statusCode = response.getCode();
+            Assert.assertEquals(statusCode,200);
+        }catch (IOException e){
+            throw new RuntimeException(e);
+        }
+        //putUpdatedBoard
 
     }
 
-
-
+//    @Test (dependsOnMethods = {"createBoard"})
+//    public void deleteBoard(){
+//        String request = baseURI + boardId + "/?" + ACCESS_KEY;
+//        HttpDelete removeSpecificBoard = new HttpDelete(request);
+//        removeSpecificBoard.setHeader("Content-type","application/json");
+//        try(CloseableHttpClient client = HttpClients.createDefault();
+//            CloseableHttpResponse response = client.execute(removeSpecificBoard)){
+//            int statusCode =response.getCode();
+//            Assert.assertEquals(statusCode,200);
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
 }
 
