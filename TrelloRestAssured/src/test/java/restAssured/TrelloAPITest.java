@@ -3,13 +3,17 @@ package restAssured;
 import io.restassured.RestAssured;
 import io.restassured.response.ResponseBody;
 import io.restassured.response.ValidatableResponse;
-import org.example.Board;
+import org.example.apihelpers.BoardCreateHelper;
+import org.example.models.Board;
+import org.example.models.ConnectionInfo;
 import org.testng.Assert;
+import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Properties;
 
 import static io.restassured.RestAssured.given;
@@ -19,6 +23,7 @@ public class TrelloAPITest {
     Properties prop = new Properties();
     String ACCESS_KEY;
     static String boardId;
+    BoardCreateHelper boardCreateHelper = new BoardCreateHelper();
 
     public static String getBoardId() {
         return boardId;
@@ -46,15 +51,16 @@ public class TrelloAPITest {
         ValidatableResponse response = given()
                 .contentType("application/json")
                 // .body(new Board("abc"))
-                .queryParam("name","Brand New Appliances12345")
+                .queryParam("name","Brand New Appliances")
                 .queryParam("desc","Describes in detail household appliances to be purchased")
                 .when()
                 .post("?"+ACCESS_KEY)
                 .then()
                 .statusCode(200)
                 .body("name",equalTo("Brand New Appliances"));
+
+        System.out.println("Retrieves board id and sets it as a global variable");
         TrelloAPITest.setBoardId(response.extract().jsonPath().getString("id"));
-        System.out.println(response.extract().jsonPath().getString("id"));
 
         System.out.println("New board created: "+TrelloAPITest.boardId);
     }
@@ -66,7 +72,7 @@ public class TrelloAPITest {
                 .get( TrelloAPITest.boardId +"/?" + ACCESS_KEY).getBody();
         responseBody.as(Board.class);
         System.out.println("The following board(s) have been found \n" +responseBody.prettyPrint());
-        Assert.assertTrue(responseBody.prettyPrint().contains((getBoardId())));
+        Assert.assertTrue(responseBody.prettyPrint().contains((getBoardId())),"The board id is not in the response body");
     }
 
     @Test(dependsOnMethods = {"getBoard"})
@@ -81,6 +87,7 @@ public class TrelloAPITest {
                     .put(TrelloAPITest.boardId+"/?"+ACCESS_KEY)
                 .then()
                     .statusCode(200);
+        Assert.assertEquals(response.extract().statusCode(),200, "Board was not updated");
     }
 
     @Test (dependsOnMethods = {"updateBoard"})
@@ -91,7 +98,29 @@ public class TrelloAPITest {
                     .delete(TrelloAPITest.boardId+ "?"+ ACCESS_KEY)
                 .then()
                     .statusCode(200);
-        Assert.assertNull(response.extract().path("id"));
+        Assert.assertNull(response.extract().path("id"), "Board was not deleted, expected to see null on board id get call, board id: "+response.extract().path("id"));
     }
 
+
+    @AfterTest
+    void deleteAllBoards (){
+        System.out.println("Get all board ids");
+        ResponseBody response = given()
+                .when()
+                .get("https://api.trello.com/1/members/me?"+ ACCESS_KEY)
+                .getBody();
+
+        System.out.println("Loop through board id list");
+        ConnectionInfo info = response.as(ConnectionInfo.class);
+        List<String> boardsList = info.getIdBoards();
+        int statusCode = 0;
+        String boardId = "";
+        // exclude the first board
+        for (int i=1; i<boardsList.size(); i++) {
+            boardId = boardsList.get(i);
+            statusCode = boardCreateHelper.deleteBoard(ACCESS_KEY, boardId);
+            Assert.assertEquals(statusCode, 200, "the board is not deleted");
+            System.out.println("Status code: "+ statusCode+" Deleted Board Id: "+ boardId);
+        }
+    }
 }
