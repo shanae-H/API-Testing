@@ -1,13 +1,18 @@
 package apachehttp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hc.client5.http.UserTokenHandler;
+import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.CredentialsProvider;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.HttpStatus;
 import org.pojo.Board;
 import org.testng.Assert;
@@ -93,22 +98,20 @@ public class TrelloApacheTest {
         }catch (IOException e){
             throw new RuntimeException(e);
         }
-        //putUpdatedBoard
-
     }
 
-//    @Test (dependsOnMethods = {"createBoard"})
-//    public void deleteBoard(){
-//        String request = baseURI + boardId + "/?" + ACCESS_KEY;
-//        HttpDelete removeSpecificBoard = new HttpDelete(request);
-//        removeSpecificBoard.setHeader("Content-type","application/json");
-//        try(CloseableHttpClient client = HttpClients.createDefault();
-//            CloseableHttpResponse response = client.execute(removeSpecificBoard)){
-//            int statusCode =response.getCode();
-//            Assert.assertEquals(statusCode,200);
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
+    @Test (dependsOnMethods = {"createBoard"})
+    public void deleteBoard(){
+        String request = baseURI + boardId + "/?" + ACCESS_KEY;
+        HttpDelete removeSpecificBoard = new HttpDelete(request);
+        removeSpecificBoard.setHeader("Content-type","application/json");
+        try(CloseableHttpClient client = HttpClients.createDefault();
+            CloseableHttpResponse response = client.execute(removeSpecificBoard)){
+            int statusCode =response.getCode();
+            Assert.assertEquals(statusCode,200);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
 
