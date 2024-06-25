@@ -1,6 +1,8 @@
 package apachehttp;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
@@ -12,6 +14,7 @@ import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.apache.hc.core5.util.Asserts;
+import org.pojo.Board;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -28,6 +31,17 @@ public class TrelloApacheTest {
     String API_KEY;
     String TOKEN;
     String baseURI= "https://api.trello.com/1/boards/";
+    String boardId;
+
+    public String getBoardId() {
+        return boardId;
+    }
+
+    public void setBoardId(String newBoardId) {
+        if (boardId==null){
+            this.boardId = newBoardId;
+        }
+    }
 
     @BeforeTest
     public void setUp() throws IOException{
@@ -38,19 +52,44 @@ public class TrelloApacheTest {
         TOKEN = prop.get("token").toString();
         ACCESS_KEY = "key=" + API_KEY + "&token=" + TOKEN;
     }
+
     @Test
     public void createBoard(){
         String request = baseURI+"?name=ApacheBoard&"+ACCESS_KEY;
         HttpPost post = new HttpPost(request);
         post.setHeader("Content-type","application/json");
         try(CloseableHttpClient client = HttpClients.createDefault();
-        CloseableHttpResponse response = (CloseableHttpResponse) client.execute(post)){
+        CloseableHttpResponse response = client.execute(post)){
             int statusCode = response.getCode();
+            Assert.assertEquals(statusCode,200);
+            ObjectMapper objectMapper = new ObjectMapper();
+            Board board = objectMapper.readValue(response.getEntity().getContent(), Board.class);
+            setBoardId(board.getId());
+            System.out.println("New board created. ID# "+ boardId);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    public void getBoard(){
+        String request = baseURI+boardId+"/?"+ACCESS_KEY;
+        HttpGet getSpecificBoard = new HttpGet(request);
+        getSpecificBoard.setHeader("Content-type","application/json");
+        try(CloseableHttpClient client = HttpClients.createDefault();
+        CloseableHttpResponse response = client.execute(getSpecificBoard)){
+            int statusCode =response.getCode();
             Assert.assertEquals(statusCode,200);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
+    @Test
+    public void updateBoard(){
+
+    }
+
 
 
 }
