@@ -1,6 +1,8 @@
 package okHttp;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
+import org.pojos.Board;
 import org.testng.Assert;
 import org.testng.AssertJUnit;
 import org.testng.annotations.BeforeTest;
@@ -67,38 +69,6 @@ public class TrelloOkHttpTest {
     }
 
     @Test
-    public void createBoards(){
-        //Assert.assertNotNull(baseURI);
-        OkHttpClient client = new OkHttpClient();
-        HttpUrl httpUrl = new HttpUrl.Builder()
-                .scheme("https")
-                .host("api.trello.com")
-                .addPathSegment("/1/boards")
-                .addQueryParameter("name","New Board!!!")
-                .addQueryParameter("prefs_background","lime")
-                .addQueryParameter("key",API_KEY)
-                .addQueryParameter("token", TOKEN)
-                .build();
-
-        System.out.println("Verify created uri:\n"+httpUrl.toString());
-        Request request = new Request.Builder()
-                .url(httpUrl)
-                .addHeader("Content-type","application/json")
-                .addHeader("Accept","application/json")
-                .build();
-
-        try (Response response = client.newCall(request).execute()){
-            int status =response.code();
-            AssertJUnit.assertEquals(200,status);
-            Assert.assertNotNull(response.body());
-            System.out.println("Verify createBoard method resulted in: "+ response.body().string());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-    }
-
-    @Test
     public void createBoard(){
         RequestBody requestBody = new FormBody.Builder()
                 .add("name","New Board!!!")
@@ -116,7 +86,13 @@ public class TrelloOkHttpTest {
             int status = response.code();
             Assert.assertEquals(status,200);
 
+            ObjectMapper objectMapper = new ObjectMapper();
+            System.out.println("Json response is deserialized and mapped to the Board class");
+            Assert.assertNotNull(response.body(),"Response is empty");
+            Board board = objectMapper.readValue(response.body().string(), Board.class);
 
+            setBoardId(board.getId());
+            System.out.println("New board created. ID# "+ boardId);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
