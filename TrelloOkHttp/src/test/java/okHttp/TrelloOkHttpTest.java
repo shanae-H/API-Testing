@@ -1,9 +1,6 @@
 package okHttp;
 
-import okhttp3.Call;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
 import org.testng.Assert;
 import org.testng.AssertJUnit;
 import org.testng.annotations.BeforeTest;
@@ -11,6 +8,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Objects;
 import java.util.Properties;
 
 public class TrelloOkHttpTest {
@@ -53,6 +51,7 @@ public class TrelloOkHttpTest {
     @Test
     public void verifyConnection(){
         try {
+
             Request request = new Request.Builder()
                     .url("https://api.trello.com/1/members/me?"+ACCESS_KEY)
                     .build();
@@ -68,8 +67,61 @@ public class TrelloOkHttpTest {
     }
 
     @Test
-    public void createBoard(){
+    public void createBoards(){
+        //Assert.assertNotNull(baseURI);
+        OkHttpClient client = new OkHttpClient();
+        HttpUrl httpUrl = new HttpUrl.Builder()
+                .scheme("https")
+                .host("api.trello.com")
+                .addPathSegment("/1/boards")
+                .addQueryParameter("name","New Board!!!")
+                .addQueryParameter("prefs_background","lime")
+                .addQueryParameter("key",API_KEY)
+                .addQueryParameter("token", TOKEN)
+                .build();
+
+        System.out.println("Verify created uri:\n"+httpUrl.toString());
+        Request request = new Request.Builder()
+                .url(httpUrl)
+                .addHeader("Content-type","application/json")
+                .addHeader("Accept","application/json")
+                .build();
+
+        try (Response response = client.newCall(request).execute()){
+            int status =response.code();
+            AssertJUnit.assertEquals(200,status);
+            Assert.assertNotNull(response.body());
+            System.out.println("Verify createBoard method resulted in: "+ response.body().string());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
     }
+
+    @Test
+    public void createBoard(){
+        RequestBody requestBody = new FormBody.Builder()
+                .add("name","New Board!!!")
+                .add("prefs_background","lime")
+                .add("key",API_KEY)
+                .add("token",TOKEN)
+                .build();
+
+        Request postRequest = new Request.Builder()
+                .url(baseURI)
+                .post(requestBody)
+                .build();
+
+        try (Response response = client.newCall(postRequest).execute()) {
+            int status = response.code();
+            Assert.assertEquals(status,200);
+
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
 
 }
