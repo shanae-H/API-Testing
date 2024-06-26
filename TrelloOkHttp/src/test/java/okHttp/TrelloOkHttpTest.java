@@ -10,7 +10,6 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Objects;
 import java.util.Properties;
 
 public class TrelloOkHttpTest {
@@ -53,11 +52,10 @@ public class TrelloOkHttpTest {
     @Test
     public void verifyConnection(){
         try {
-
-            Request request = new Request.Builder()
+            Request verifyRequest = new Request.Builder()
                     .url("https://api.trello.com/1/members/me?"+ACCESS_KEY)
                     .build();
-            try (Response response = client.newCall(request).execute()) {
+            try (Response response = client.newCall(verifyRequest).execute()) {
                 int status =response.code();
                 AssertJUnit.assertEquals(200,status);
                 Assert.assertNotNull(response.body());
@@ -68,7 +66,7 @@ public class TrelloOkHttpTest {
         }
     }
 
-    @Test
+    @Test (dependsOnMethods = {"verifyConnection"})
     public void createBoard(){
         RequestBody requestBody = new FormBody.Builder()
                 .add("name","New Board!!!")
@@ -92,11 +90,70 @@ public class TrelloOkHttpTest {
             Board board = objectMapper.readValue(response.body().string(), Board.class);
 
             setBoardId(board.getId());
-            System.out.println("New board created. ID# "+ boardId);
+            System.out.println("New board created.Board ID#: "+ boardId);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
+    @Test (dependsOnMethods = {"createBoard"})
+    public void getBoard(){
+        Request getRequest = new Request.Builder()
+                .url(baseURI+boardId+"/?"+ACCESS_KEY)
+                .build();
+        try (Response response = client.newCall(getRequest).execute()) {
+            int status =response.code();
+            AssertJUnit.assertEquals(200,status);
+            Assert.assertNotNull(response.body());
+            System.out.println("Board retrieved: "+ response.body().string());
+        }
+     catch (IOException e) {
+        throw new RuntimeException(e);
+        }
+    }
+
+    @Test (dependsOnMethods = {"getBoard"})
+    public void updateBoard(){
+        RequestBody requestBody = new FormBody.Builder()
+                .add("name","Dream Vacation Plan")
+                .add("desc","Budget estimation and travel plans for a vacation tripe")
+                .add("prefs/background","sky")
+                .add("key",API_KEY)
+                .add("token",TOKEN)
+                .build();
+
+        Request putRequest = new Request.Builder()
+                .url(baseURI+boardId)
+                .put(requestBody)
+                .build();
+
+        try (Response response = client.newCall(putRequest).execute()) {
+            int status = response.code();
+            Assert.assertEquals(status,200);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test (dependsOnMethods={"updateBoard"})
+    public void deleteBoard(){
+        Request getRequest = new Request.Builder()
+                .url(baseURI+boardId+"/?"+ACCESS_KEY)
+                .delete()
+                .build();
+
+        try (Response response = client.newCall(getRequest).execute()) {
+            int status =response.code();
+            AssertJUnit.assertEquals(200,status);
+            System.out.println("Board ID#: " +boardId+ "has been deleted ");
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
 
 
 
